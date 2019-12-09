@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="42f066b2-0ed1-4679-98fc-729fcd738470" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/popy.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_popy.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="1Ulb1g4m6xriGA2FOVHQrM6UuE7" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+  </component>
+  <component name="RunManager">
+    <configuration name="pytest in yamatteo" type="tests" factoryName="py.test" nameIsGenerated="true">
+      <module name="popy" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="$PROJECT_DIR$/venv/bin/python3.7" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="42f066b2-0ed1-4679-98fc-729fcd738470" name="Default Changelist" comment="" />
+      <created>1575933915410</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1575933915410</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="258" y="120" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1575933993810">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state x="258" y="120" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.27.1600.873@0.27.1600.873" timestamp="1575933993810" />
+    <state width="1577" height="219" key="GridCell.Tab.0.bottom" timestamp="1575934207721">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state width="1577" height="219" key="GridCell.Tab.0.bottom/0.27.1600.873@0.27.1600.873" timestamp="1575934207721" />
+    <state width="1577" height="219" key="GridCell.Tab.0.center" timestamp="1575934207720">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state width="1577" height="219" key="GridCell.Tab.0.center/0.27.1600.873@0.27.1600.873" timestamp="1575934207720" />
+    <state width="1577" height="219" key="GridCell.Tab.0.left" timestamp="1575934207720">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state width="1577" height="219" key="GridCell.Tab.0.left/0.27.1600.873@0.27.1600.873" timestamp="1575934207720" />
+    <state width="1577" height="219" key="GridCell.Tab.0.right" timestamp="1575934207721">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state width="1577" height="219" key="GridCell.Tab.0.right/0.27.1600.873@0.27.1600.873" timestamp="1575934207721" />
+    <state x="289" y="97" key="SettingsEditor" timestamp="1575934034126">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state x="289" y="97" key="SettingsEditor/0.27.1600.873@0.27.1600.873" timestamp="1575934034126" />
+    <state x="579" y="135" width="432" height="655" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1575934096679">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state x="579" y="135" width="432" height="655" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/0.27.1600.873@0.27.1600.873" timestamp="1575934096679" />
+    <state x="568" y="382" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1575934341463">
+      <screen x="0" y="27" width="1600" height="873" />
+    </state>
+    <state x="568" y="382" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.27.1600.873@0.27.1600.873" timestamp="1575934341463" />
+  </component>
+</project>
