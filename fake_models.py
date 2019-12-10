@@ -4,5 +4,5 @@ it, and pass them as a list, a dictionary or a module to the functions you are i
 from .popyorm import *
 
 
-class AA(Model):
+class Ma(Model):
     aa = Required(str)
