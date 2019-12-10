@@ -1,11 +1,20 @@
 from .model import Model
-from pony.orm import Required, Optional, Set, Json, db_session, Database
+from pony.orm import Required, Optional, Set, Json, db_session, Database, PrimaryKey
 from typing import Dict, Type
 import types
 
 
-def generate_database():
-    pass
+def generate_database(module: types.ModuleType, **kwargs) -> Database:
+    """Given a module, it extract its adequate class and build a ponyorm's Database with them. Arguments for the 
+    database creation (i.e. provider, filename and create_db) are to be passed as keywords. """
+    models_dict = extract_popy_models(module)
+    db = Database(**kwargs)
+    for key, model in models_dict.items():
+        # This is ponyorm's _magic_ that I don't understand: by defining a type that inherits from db.Entity, that type
+        # goes into db with its primary key and the database gets its tables and so on and so forth... and it works!
+        type(key, (model, db.Entity,), {})
+    db.generate_mapping(create_tables=True)
+    return db
 
 
 def generate_schemas():
