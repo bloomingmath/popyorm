@@ -1,7 +1,7 @@
 from .model import Model, SCHEMAS, OPERATIONS, SchemaContainer, OperationContainer
 from pony.orm import Required, Optional, Set, Json, db_session, Database, PrimaryKey
 from pydantic import BaseModel
-from typing import Dict, Type, Tuple
+from typing import Dict, Type, Tuple, Any
 from types import ModuleType
 
 
@@ -44,7 +44,7 @@ def generate_popy(module: ModuleType, **kwargs) -> Tuple[Database, SchemaContain
     return generate_database(module, **kwargs), generate_schemas(module), generate_operations(module)
 
 
-def extract_popy_models(module: ModuleType) -> Dict[str, Type[Model]]:
+def extract_popy_models(module: ModuleType) -> Dict[str, Any]:
     """Returns all class derived from Model (not Model itself) in the given module, in a dictionary."""
     return {attr: getattr(module, attr)
             for attr in dir(module)

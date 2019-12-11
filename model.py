@@ -22,12 +22,13 @@ class Model:
 
     @classmethod
     def pydantic_model(cls, schema_name: LITSCHEMAS, all_models: Dict[str, Type[Model]]) -> Type[BaseModel]:
-        model_name = cls.__name__.capitalize()
-        schema_name = f"{schema_name.capitalize()}{model_name}Schema"
-        if hasattr(cls, f"{schema_name}_preparation"):
-            kwargs = kwargs_from_prep(getattr(cls, f"{schema_name}_preparation"))
+        model_name = cls.__name__
+        model = all_models[model_name]
+        if hasattr(model, f"{schema_name}_preparation"):
+            kwargs = kwargs_from_prep(getattr(model, f"{schema_name}_preparation"))
         else:
             kwargs = kwargs_from_cls(cls, all_models)
+        schema_name = f"{schema_name.capitalize()}{model_name}Schema"
         return create_model(schema_name, **kwargs)
 
     @classmethod
@@ -39,7 +40,7 @@ class Model:
             def func(db: Database, create_info: schema):
                 model = getattr(db, model_name)
                 if hasattr(model, "create_preparation"):
-                    create_info = model.create_preparation(create_info)
+                    create_info = model.create_preparation(**create_info)
                 new_instance = model(**create_info)
                 return new_instance
 
@@ -51,7 +52,7 @@ class Model:
             def func(db: Database, get_info: schema):
                 model = getattr(db, model_name)
                 if hasattr(model, "get_preparation"):
-                    get_info = model.get_preparation(get_info)
+                    get_info = model.get_preparation(**get_info)
                 instance = model.get(**get_info)
                 return instance
 
@@ -63,7 +64,7 @@ class Model:
             def func(db: Database, select_info: schema):
                 model = getattr(db, model_name)
                 if hasattr(model, "select_preparation"):
-                    select_info = model.select_preparation(select_info)
+                    select_info = model.select_preparation(**select_info)
 
                 query = model.select()
                 for key, value in select_info.items():
@@ -80,10 +81,10 @@ class Model:
             def func(db: Database, get_info: get_schema, update_info: update_schema):
                 model = getattr(db, model_name)
                 if hasattr(model, "get_preparation"):
-                    get_info = model.get_preparation(get_info)
+                    get_info = model.get_preparation(**get_info)
                 instance = model.get(**get_info)
                 if hasattr(model, "update_preparation"):
-                    update_info = model.update_preparation(update_info)
+                    update_info = model.update_preparation(**update_info)
                 instance.set(**update_info)
                 return instance
 
@@ -95,7 +96,7 @@ class Model:
             def func(db: Database, get_info: schema):
                 model = getattr(db, model_name)
                 if hasattr(model, "get_preparation"):
-                    get_info = model.get_preparation(get_info)
+                    get_info = model.get_preparation(**get_info)
                 model.get(**get_info).delete()
                 return None
 
