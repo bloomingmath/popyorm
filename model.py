@@ -32,18 +32,20 @@ class Model:
         return create_model(schema_name, **kwargs)
 
     @classmethod
-    def generate_operation(cls, operation_name: LITOPERATIONS, schemas: SchemaContainer):
-        model_name = cls.__name__.capitalize()
+    def generate_operation(cls, operation_name: LITOPERATIONS, schemas: SchemaContainer, all_models: Dict[str, Type[Model]]):
+        model_name = cls.__name__
         if operation_name == "create":
             schema = getattr(getattr(schemas, "create"), model_name.lower())
 
             def func(db: Database, create_info: schema):
-                model = getattr(db, model_name)
+                model = all_models[model_name]
+                dbmodel = getattr(db, model_name)
                 if hasattr(model, "create_preparation"):
                     create_info = model.create_preparation(**create_info)
-                new_instance = model(**create_info)
+                new_instance = dbmodel(**create_info)
                 return new_instance
 
+                model = getattr(db, model_name)
             func.__name__ = f"operation_{operation_name}_{model_name.lower()}"
             return func
         elif operation_name == "get":

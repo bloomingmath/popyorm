@@ -36,7 +36,7 @@ def generate_operations(module: ModuleType) -> OperationContainer:
     for operation in OPERATIONS:
         setattr(operations, operation, OperationContainer())
         for model_name, model in models_dict.items():
-            setattr(getattr(operations, operation), model_name.lower(), model.generate_operation(operation, schemas))
+            setattr(getattr(operations, operation), model_name.lower(), model.generate_operation(operation, schemas, models_dict))
     return operations
 
 

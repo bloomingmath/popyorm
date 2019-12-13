@@ -94,3 +94,30 @@ class ModelC(Model):
     @classmethod
     def show_preparation(cls, arg_e, arg_f, arg_g, arg_h):
         return None
+
+class ModelD(Model):
+    arg_a = Required(str)
+    arg_b = Required(int)
+
+    @classmethod
+    def create_preparation(cls, arg_a: str):
+        return {"arg_a": arg_a, "arg_b": len(arg_a)}
+
+    @classmethod
+    def get_preparation(cls, arg_a: str):
+        return {"arg_a": arg_a}
+
+    @classmethod
+    def select_preparation(cls, arg_b: int = None):
+        return {"arg_b": arg_b}
+
+    @classmethod
+    def update_preparation(cls, arg_a: str = None):
+        if arg_a is not None:
+            return {"arg_a": arg_a, "arg_b": len(arg_a)}
+        else:
+            return {}
+
+    @classmethod
+    def show_preparation(cls, arg_a, arg_b):
+        return None

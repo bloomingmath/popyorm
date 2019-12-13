@@ -2,7 +2,7 @@ from .popyorm import *
 from importlib import import_module
 
 fake_models = import_module(".fake_models", "popy")
-db = generate_database(fake_models, provider="sqlite", filename=":memory:", create_db=True)
+db, schemas, operations = generate_popy(fake_models, provider="sqlite", filename=":memory:", create_db=True)
 
 
 def test_module_import():
@@ -27,14 +27,12 @@ def test_generate_database():
 
 
 def test_generate_schemas():
-    schemas = generate_schemas(fake_models)
     assert issubclass(schemas.create.ma, BaseModel)
     assert "arg_a" in schemas.show.ma.__fields__
     assert schemas.update.ma.__fields__["arg_a"].type_ == str
 
 
 def test_generate_operations():
-    operations = generate_operations(module=fake_models)
     assert callable(operations.create.ma)
     with db_session:
         new_ima = operations.create.ma(db=db, create_info={"arg_a": "x"})
@@ -58,3 +56,9 @@ def test_generate_operations():
 
         operations.delete.ma(db=db, get_info={"arg_a": "y"})
         assert operations.select.ma(db=db, select_info={}).count() == 1
+
+def test_model_d():
+    with db_session:
+        imd = operations.create.modeld(db, {"arg_a":"abcdef"})
+        assert isinstance(imd, db.ModelD)
+        assert imd.arg_b == 6
