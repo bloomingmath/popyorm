@@ -29,7 +29,9 @@ class Model:
         else:
             kwargs = kwargs_from_cls(cls, all_models)
         schema_name = f"{schema_name.capitalize()}{model_name}Schema"
-        return create_model(schema_name, **kwargs)
+        pydantic_model = create_model(schema_name, **kwargs)
+        setattr(pydantic_model, "is_a_pydantic_model", True)
+        return pydantic_model
 
     @classmethod
     def generate_operation(cls, operation_name: LITOPERATIONS, schemas: SchemaContainer, all_models: Dict[str, Type[Model]]):
@@ -47,6 +49,7 @@ class Model:
 
                 model = getattr(db, model_name)
             func.__name__ = f"operation_{operation_name}_{model_name.lower()}"
+            setattr(func, "is_an_operation", True)
             return func
         elif operation_name == "get":
             schema = getattr(getattr(schemas, "get"), model_name.lower())
@@ -59,6 +62,7 @@ class Model:
                 return instance
 
             func.__name__ = f"operation_{operation_name}_{model_name.lower()}"
+            setattr(func, "is_an_operation", True)
             return func
         elif operation_name == "select":
             schema = getattr(getattr(schemas, "select"), model_name.lower())
@@ -75,6 +79,7 @@ class Model:
                 return query
 
             func.__name__ = f"operation_{operation_name}_{model_name.lower()}"
+            setattr(func, "is_an_operation", True)
             return func
         elif operation_name == "update":
             get_schema = getattr(getattr(schemas, "get"), model_name.lower())
@@ -91,6 +96,7 @@ class Model:
                 return instance
 
             func.__name__ = f"operation_{operation_name}_{model_name.lower()}"
+            setattr(func, "is_an_operation", True)
             return func
         elif operation_name == "delete":
             schema = getattr(getattr(schemas, "get"), model_name.lower())
@@ -103,6 +109,7 @@ class Model:
                 return None
 
             func.__name__ = f"operation_{operation_name}_{model_name.lower()}"
+            setattr(func, "is_an_operation", True)
             return func
         else:
             return lambda: True
@@ -143,20 +150,34 @@ def kwargs_from_cls(cls: Type[Model], all_models: Dict[str, Type[Model]]):
 
 
 class ModelContainer:
-    pass
+    def __init__(self, _name):
+        self._name = _name
+
+    def __iter__(self):
+        for attr in dir(self):
+            if hasattr(getattr(self, attr), "is_an_operation"):
+                yield getattr(self, attr)
+            if hasattr(getattr(self, attr), "is_a_pydantic_model"):
+                yield getattr(self, attr)
+
 
 
 class SchemaContainer:
-    create = ModelContainer()
-    show = ModelContainer()
-    get = ModelContainer()
-    select = ModelContainer()
-    update = ModelContainer()
+    def __init__(self):
+        for schema in SCHEMAS:
+            setattr(self, schema, ModelContainer(schema))
+
+    def __iter__(self):
+        for schema in SCHEMAS:
+            yield getattr(self, schema)
+
 
 
 class OperationContainer:
-    create = ModelContainer()
-    get = ModelContainer()
-    select = ModelContainer()
-    update = ModelContainer()
-    delete = ModelContainer()
+    def __init__(self):
+        for operation in OPERATIONS:
+            setattr(self, operation, ModelContainer(operation))
+
+    def __iter__(self):
+        for operation in OPERATIONS:
+            yield getattr(self, operation)

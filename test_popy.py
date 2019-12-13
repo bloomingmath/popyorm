@@ -62,3 +62,8 @@ def test_model_d():
         imd = operations.create.modeld(db, {"arg_a":"abcdef"})
         assert isinstance(imd, db.ModelD)
         assert imd.arg_b == 6
+
+def test_operations_as_iterator():
+    assert len(list(operations)) == 5
+    models_dict = extract_popy_models(fake_models)
+    assert len(list(operations.create)) == len(models_dict.keys())
