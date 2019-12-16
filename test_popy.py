@@ -91,7 +91,8 @@ def test_base_container():
 def test_model_container():
     # ModelContainer generate database tables, models with pydantic schemas and operations
     ModelA, ModelB = mc = ModelContainer(bases, provider="sqlite", filename=":memory:", create_db=True)
-    assert "ModelA" in mc.keys()
-    with mc.db_session:
-        x = ModelA.operations.create(create_info={"arg_a": "s"})
-    assert isinstance(x, ModelA)
+    with db_session:
+        x = ModelB.operations.create(create_info={"arg_a": "example"})
+    with db_session:
+        y = ModelB.operations.fetch({"arg_b": 7})
+        assert y.arg_a == "example"

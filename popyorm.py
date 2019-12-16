@@ -117,44 +117,41 @@ class ModelContainer(Container):
             self[base.__name__] = model
         for model in self:
             for schema_name in model.schemas.keys():
-                model.schemas[schema_name] = self.pydantic_model(model.__name__, schema_name)
+                model.schemas[schema_name] = self.pydantic_model(model, schema_name)
             for operation_name in model.operations.keys():
-                model.operations[operation_name] = self.generate_operation(model.__name__, operation_name)
+                model.operations[operation_name] = self.generate_operation(model, operation_name)
         db.generate_mapping(create_tables=True)
 
-    def pydantic_model(self, model_name, schema_name):
+    def pydantic_model(self, model, schema_name):
         from pydantic import create_model
-        model = self[model_name]
         if hasattr(model, f"{schema_name}_preparation"):
             kwargs = self.kwargs_from_prep(getattr(model, f"{schema_name}_preparation"))
         else:
             kwargs = self.kwargs_from_cls(model)
-        schema_name = f"{model_name}{schema_name.capitalize()}Schema"
-        pydanticmodel = create_model(schema_name, **kwargs)
-        setattr(pydanticmodel, "is_a_pydantic_model", True)
-        return pydanticmodel
+        schema_name = f"{model.__name__}{schema_name.capitalize()}Schema"
+        schema = create_model(schema_name, **kwargs)
+        setattr(schema, "is_a_pydantic_model", True)
+        return schema
 
-    def generate_operation(self, model_name, operation_name):
-        model = self[model_name]
-
+    def generate_operation(self, model, operation_name):
         if operation_name == "create":
-            def func(*, create_info: model.schemas.create):
+            def func(create_info: model.schemas.create):
                 try:
-                    create_info = model.create_preparation(**create_info)
+                    create_info = model.create_preparation(self=None, **create_info)
                 except AttributeError:
                     pass
                 return model(**create_info)
         elif operation_name == "fetch":
             def func(get_info: model.schemas.get):
                 try:
-                    get_info = model.fetch_preparation(**get_info)
+                    get_info = model.fetch_preparation(self=None, **get_info)
                 except AttributeError:
                     pass
                 return model.get(**get_info)
         elif operation_name == "select":
             def func(select_info: model.schemas.select):
                 try:
-                    select_info = model.select_preparation(**select_info)
+                    select_info = model.select_preparation(self=None, **select_info)
                 except AttributeError:
                     pass
                 query = model.select()
@@ -164,25 +161,27 @@ class ModelContainer(Container):
         elif operation_name == "update":
             def func(get_info: model.schemas.get, update_info: model.schemas.update):
                 try:
-                    get_info = model.get_preparation(**get_info)
-                except AttributeError:
-                    pass
-                try:
-                    update_info = model.update_preparation(**update_info)
+                    get_info = model.get_preparation(self=None, **get_info)
                 except AttributeError:
                     pass
                 instance = model.get(get_info)
+                try:
+                    update_info = model.update_preparation(self=instance, **update_info)
+                except AttributeError:
+                    pass
                 instance.set(update_info)
                 return instance
         elif operation_name == "delete":
             def func(get_info: model.schemas.get):
                 try:
-                    get_info = model.get_preparation(**get_info)
+                    get_info = model.get_preparation(self=None, **get_info)
                 except AttributeError:
                     pass
                 return model.get(**get_info).delete()
+        else:
+            raise ValueError(f"Operation {operation_name} is not implemented.")
 
-        func.__name__ = f"operation_{operation_name}_{model_name.lower()}"
+        func.__name__ = f"operation{operation_name.capitalize()}{model.__name__}"
         setattr(func, "is_an_operation", True)
         return func
 
