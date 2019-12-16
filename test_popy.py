@@ -64,7 +64,7 @@ def test_schema_and_operation_containers():
     o = OperationContainer()
 
     # SchemaContainer and OperationContainer are fixed and can't be arbitrarily assigned, except on predetermined keys
-    assert list(s.keys()) == ["crt", "get", "qry", "put"]
+    assert list(s.keys()) == ["create", "get", "select", "update"]
     assert o.create is Ellipsis
     s["get"] = 45
     assert s.get == 45
@@ -81,16 +81,17 @@ def test_base_container():
     assert bases.ModelA in bmc
     assert any(isclass(model) for model in bmc)
 
+    # BaseContainer can extract fields and functions from base (static method)
+    any_bmc = BaseContainer()
+    ModelB = bmc.ModelB
+    assert any_bmc.extract_fields(ModelB) == {"arg_a": ModelB.arg_a, "arg_b": ModelB.arg_b}
+    assert any_bmc.extract_functions(ModelB) == {"create_preparation": ModelB.create_preparation}
 
-def test_get_fields():
-    basemodels_dict = BaseModelDict(fake_models)
-    BaseModelA = basemodels_dict["ModelA"]
-    assert "arg_a" in get_fields(BaseModelA)
 
-
-def test_generate_models_dict():
-    assert "arg_a" in models["ModelA"].schemas.create.schema()["properties"]
-    ModelA = models["ModelA"]
-    with db_session:
+def test_model_container():
+    # ModelContainer generate database tables, models with pydantic schemas and operations
+    ModelA, ModelB = mc = ModelContainer(bases, provider="sqlite", filename=":memory:", create_db=True)
+    assert "ModelA" in mc.keys()
+    with mc.db_session:
         x = ModelA.operations.create(create_info={"arg_a": "s"})
     assert isinstance(x, ModelA)

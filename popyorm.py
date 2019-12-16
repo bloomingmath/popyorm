@@ -67,7 +67,7 @@ class FixedContainer(Container):
 
 class SchemaContainer(FixedContainer):
     def __init__(self):
-        super().__init__("crt", "get", "qry", "put")
+        super().__init__("create", "get", "select", "update")
 
 
 class OperationContainer(FixedContainer):
@@ -78,52 +78,49 @@ class OperationContainer(FixedContainer):
 class BaseContainer(Container):
     """A Container with all classes defined in the given module"""
 
-    def __init__(self, module):
+    def __init__(self, module=None):
         super().__init__()
-        for attr, value in module.__dict__.items():
-            from inspect import isclass
-            if isclass(value) and value.__module__ == module.__name__:
-                self[attr] = value
-                # setattr(self, attr, value)
+        if module is not None:
+            for attr, value in vars(module).items():
+                from inspect import isclass
+                if isclass(value) and value.__module__ == module.__name__:
+                    self[attr] = value
 
     @staticmethod
-    def extract_fields(basemodel):
+    def extract_fields(base):
         from pony.orm import Required, Optional, Set
-        return {key: value for key, value in basemodel.__dict__.items() if isinstance(value, (Required, Optional, Set))}
+        return {attr: value for attr, value in vars(base).items() if isinstance(value, (Required, Optional, Set))}
 
     @staticmethod
-    def extract_functions(basemodel):
+    def extract_functions(base):
         from inspect import isfunction
-        return {attr: getattr(basemodel, attr) for attr in dir(basemodel) if isfunction(getattr(basemodel, attr))}
+        return {attr: value for attr, value in vars(base).items() if isfunction(value)}
 
 
 class ModelContainer(Container):
-    """A Container with all (ponyorm) models based on the base models defined in the given module, enriched with
+    """A Container with all (pony.orm) models based on the base models defined in the given module, enriched with
     schemas and operations """
-    from typing import Callable
 
     def __init__(self, module, **kwargs):
         from pony.orm import Database, db_session
         super().__init__()
-        bmc = BaseContainer(module)
-        db = Database(**kwargs)
-        for basemodel_name, basemodel in vars(bmc).items():
+        self.bmc = bmc = BaseContainer(module)
+        self.db = db = Database(**kwargs)
+        self.db_session = db_session
+        for base in bmc:
             fields = {"schemas": SchemaContainer(), "operations": OperationContainer()}
-            fields.update(bmc.extract_fields(basemodel))
-            fields.update(bmc.extract_functions(basemodel))
+            fields.update(bmc.extract_fields(base))
+            fields.update(bmc.extract_functions(base))
             # This is ponyorm's _magic_ that I don't understand: by defining a type that inherits from db.Entity, that
             # type goes into db with its primary key and the database gets its tables and so on... and it works!
-            model = type(basemodel_name, (db.Entity,), fields)
-            setattr(self, basemodel_name, model)
-        for basemodel_name in vars(bmc).keys():
-            model = self[basemodel_name]
+            model = type(base.__name__, (db.Entity,), fields)
+            self[base.__name__] = model
+        for model in self:
             for schema_name in model.schemas.keys():
-                model.schemas[schema_name] = self.pydantic_model(basemodel_name, schema_name)
+                model.schemas[schema_name] = self.pydantic_model(model.__name__, schema_name)
             for operation_name in model.operations.keys():
-                model.operations[operation_name] = self.generate_operation(basemodel_name, operation_name)
+                model.operations[operation_name] = self.generate_operation(model.__name__, operation_name)
         db.generate_mapping(create_tables=True)
-        setattr(self, "db", db)
-        setattr(self, "db_session", db_session)
 
     def pydantic_model(self, model_name, schema_name):
         from pydantic import create_model
@@ -141,7 +138,7 @@ class ModelContainer(Container):
         model = self[model_name]
 
         if operation_name == "create":
-            def func(*, create_info: model.schemas.crt):
+            def func(*, create_info: model.schemas.create):
                 try:
                     create_info = model.create_preparation(**create_info)
                 except AttributeError:
@@ -155,7 +152,7 @@ class ModelContainer(Container):
                     pass
                 return model.get(**get_info)
         elif operation_name == "select":
-            def func(select_info: model.schemas.qry):
+            def func(select_info: model.schemas.select):
                 try:
                     select_info = model.select_preparation(**select_info)
                 except AttributeError:
@@ -165,7 +162,7 @@ class ModelContainer(Container):
                     query = query.filter(lambda i: getattr(i, key) == value)
                 return query
         elif operation_name == "update":
-            def func(get_info: model.schemas.get, update_info: model.schemas.upd):
+            def func(get_info: model.schemas.get, update_info: model.schemas.update):
                 try:
                     get_info = model.get_preparation(**get_info)
                 except AttributeError:
@@ -190,7 +187,7 @@ class ModelContainer(Container):
         return func
 
     @staticmethod
-    def kwargs_from_prep(prep: Callable):
+    def kwargs_from_prep(prep):
         from inspect import signature, _empty
         from typing import Any
         kwargs = {}
