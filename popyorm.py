@@ -1,50 +1,235 @@
-from .model import Model, SCHEMAS, OPERATIONS, SchemaContainer, OperationContainer
-from pony.orm import Required, Optional, Set, Json, db_session, Database, PrimaryKey
-from pydantic import BaseModel
-from typing import Dict, Type, Tuple, Any
-from types import ModuleType
+class Container:
+    def __init__(self, *args, **kwargs):
+        self._dict = {}
+        for mapping in args:
+            for key, value in mapping.items():
+                self[key] = value
+        for key, value in kwargs.items():
+            self[key] = value
+        for key, value in vars(type(self)).items():
+            if value is Ellipsis:
+                self[key] = 6
+
+    def __contains__(self, item):
+        return item in self._dict.values()
+
+    def __getattr__(self, item):
+        try:
+            return object.__getattribute__(self, item)
+        except AttributeError:
+            try:
+                return self._dict[item]
+            except KeyError:
+                raise AttributeError
+
+    def __getitem__(self, item):
+        return self._dict[item]
+
+    def __iter__(self):
+        for value in self._dict.values():
+            yield value
+
+    def __setitem__(self, key, value):
+        try:
+            eval(f"self.{key}")
+        except AttributeError:
+            self._dict[key] = value
+        except SyntaxError:
+            raise KeyError
+        else:
+            self._dict[key] = value
+
+    @property
+    def __dict__(self):
+        return self._dict
+
+    def items(self):
+        return self._dict.items()
+
+    def keys(self):
+        return self._dict.keys()
+
+    def values(self):
+        return self._dict.values()
 
 
-def generate_database(module: ModuleType, **kwargs) -> Database:
-    """Given a module, it extract its adequate class and build a ponyorm's Database with them. Arguments for the 
-    database creation (i.e. provider, filename and create_db) are to be passed as keywords. """
-    models_dict = extract_popy_models(module)
-    db = Database(**kwargs)
-    for key, model in models_dict.items():
-        # This is ponyorm's _magic_ that I don't understand: by defining a type that inherits from db.Entity, that type
-        # goes into db with its primary key and the database gets its tables and so on and so forth... and it works!
-        type(key, (db.Entity,), model.get_fields())
-    db.generate_mapping(create_tables=True)
-    return db
+class FixedContainer(Container):
+    def __init__(self, *args):
+        self._keys = args
+        super().__init__({attr: ... for attr in args})
+
+    def __setitem__(self, key, value):
+        if key in self._keys:
+            super().__setitem__(key, value)
+        else:
+            raise AttributeError(f"Given key {key!r} is not in allowed keys {self._keys}")
 
 
-def generate_schemas(module: ModuleType) -> SchemaContainer:
-    """Schemas are pydantic models. They are used to validate data received in requests and to shape the response."""
-    models_dict = extract_popy_models(module)
-    schemas = SchemaContainer()
-    for schema_name in SCHEMAS:
-        for model_name, model in models_dict.items():
-            setattr(getattr(schemas, schema_name), model_name.lower(), model.pydantic_model(schema_name, models_dict))
-    return schemas
+class SchemaContainer(FixedContainer):
+    def __init__(self):
+        super().__init__("create", "get", "select", "update")
 
 
-def generate_operations(module: ModuleType) -> OperationContainer:
-    """Basics model-specific CreateReadGetUpdateDelete operations to act upon the database."""
-    models_dict = extract_popy_models(module)
-    schemas = generate_schemas(module)
-    operations = OperationContainer()
-    for operation in OPERATIONS:
-        for model_name, model in models_dict.items():
-            setattr(getattr(operations, operation), model_name.lower(), model.generate_operation(operation, schemas, models_dict))
-    return operations
+class OperationContainer(FixedContainer):
+    def __init__(self):
+        super().__init__("create", "fetch", "select", "update", "delete")
 
 
-def generate_popy(module: ModuleType, **kwargs) -> Tuple[Database, SchemaContainer, OperationContainer]:
-    return generate_database(module, **kwargs), generate_schemas(module), generate_operations(module)
+class BaseContainer(Container):
+    """A Container with all classes defined in the given module"""
+
+    def __init__(self, module=None):
+        super().__init__()
+        if module is not None:
+            for attr, value in vars(module).items():
+                from inspect import isclass
+                if isclass(value) and value.__module__ == module.__name__:
+                    self[attr] = value
+
+    @staticmethod
+    def extract_fields(base):
+        from pony.orm import Required, Optional, Set
+        return {attr: value for attr, value in vars(base).items() if isinstance(value, (Required, Optional, Set))}
+
+    @staticmethod
+    def extract_functions(base):
+        from inspect import isfunction
+        return {attr: value for attr, value in vars(base).items() if isfunction(value)}
 
 
-def extract_popy_models(module: ModuleType) -> Dict[str, Any]:
-    """Returns all class derived from Model (not Model itself) in the given module, in a dictionary."""
-    return {attr: getattr(module, attr)
-            for attr in dir(module)
-            if hasattr(getattr(module, attr), "is_popy_model") and getattr(module, attr) is not Model}
+class ModelContainer(Container):
+    """A Container with all (pony.orm) models based on the base models defined in the given module, enriched with
+    schemas and operations """
+
+    def __init__(self, module, **kwargs):
+        from pony.orm import Database, db_session
+        super().__init__()
+        self.bmc = bmc = BaseContainer(module)
+        self.db = db = Database(**kwargs)
+        self.db_session = db_session
+        for base in bmc:
+            fields = {"schemas": SchemaContainer(), "operations": OperationContainer()}
+            fields.update(bmc.extract_fields(base))
+            fields.update(bmc.extract_functions(base))
+            # This is ponyorm's _magic_ that I don't understand: by defining a type that inherits from db.Entity, that
+            # type goes into db with its primary key and the database gets its tables and so on... and it works!
+            model = type(base.__name__, (db.Entity,), fields)
+            self[base.__name__] = model
+        for model in self:
+            for schema_name in model.schemas.keys():
+                model.schemas[schema_name] = self.pydantic_model(model, schema_name)
+            for operation_name in model.operations.keys():
+                model.operations[operation_name] = self.generate_operation(model, operation_name)
+        db.generate_mapping(create_tables=True)
+
+    def pydantic_model(self, model, schema_name):
+        from pydantic import create_model
+        if hasattr(model, f"{schema_name}_preparation"):
+            kwargs = self.kwargs_from_prep(getattr(model, f"{schema_name}_preparation"))
+        else:
+            kwargs = self.kwargs_from_cls(model)
+        schema_name = f"{model.__name__}{schema_name.capitalize()}Schema"
+        schema = create_model(schema_name, **kwargs)
+        setattr(schema, "is_a_pydantic_model", True)
+        return schema
+
+    def generate_operation(self, model, operation_name):
+        if operation_name == "create":
+            def func(create_info: model.schemas.create):
+                try:
+                    create_info = model.create_preparation(self=None, **create_info)
+                except AttributeError:
+                    pass
+                return model(**create_info)
+        elif operation_name == "fetch":
+            def func(get_info: model.schemas.get):
+                try:
+                    get_info = model.fetch_preparation(self=None, **get_info)
+                except AttributeError:
+                    pass
+                return model.get(**get_info)
+        elif operation_name == "select":
+            def func(select_info: model.schemas.select):
+                try:
+                    select_info = model.select_preparation(self=None, **select_info)
+                except AttributeError:
+                    pass
+                query = model.select()
+                for key, value in select_info.items():
+                    query = query.filter(lambda i: getattr(i, key) == value)
+                return query
+        elif operation_name == "update":
+            def func(get_info: model.schemas.get, update_info: model.schemas.update):
+                try:
+                    get_info = model.get_preparation(self=None, **get_info)
+                except AttributeError:
+                    pass
+                instance = model.get(get_info)
+                try:
+                    update_info = model.update_preparation(self=instance, **update_info)
+                except AttributeError:
+                    pass
+                instance.set(update_info)
+                return instance
+        elif operation_name == "delete":
+            def func(get_info: model.schemas.get):
+                try:
+                    get_info = model.get_preparation(self=None, **get_info)
+                except AttributeError:
+                    pass
+                return model.get(**get_info).delete()
+        else:
+            raise ValueError(f"Operation {operation_name} is not implemented.")
+
+        func.__name__ = f"operation{operation_name.capitalize()}{model.__name__}"
+        setattr(func, "is_an_operation", True)
+        return func
+
+    @staticmethod
+    def kwargs_from_prep(prep):
+        from inspect import signature, _empty
+        from typing import Any
+        kwargs = {}
+        sign = signature(prep).parameters
+        for field, parameter in sign.items():
+            if parameter.annotation is _empty:
+                attr_type = Any
+            else:
+                attr_type = parameter.annotation
+            if parameter.default is _empty:
+                attr_default = Ellipsis
+            else:
+                attr_default = parameter.default
+            kwargs[field] = (attr_type, attr_default)
+        return kwargs
+
+    def kwargs_from_cls(self, model):
+        from pony.orm import Json
+        from typing import Any
+        kwargs = {}
+        original_fields = model._adict_
+        for field, parameter in original_fields.items():
+            if isinstance(parameter.py_type, str):
+                attr_type = self[parameter.py_type]
+            elif isinstance(parameter.py_type, Json):
+                attr_type = Any
+            else:
+                attr_type = parameter.py_type
+            if "default" in parameter.kwargs:
+                attr_default = parameter.kwargs["default"]
+            else:
+                attr_default = Ellipsis
+            kwargs[field] = (attr_type, attr_default)
+        return kwargs
+
+
+if __name__ == "__main__":
+    from importlib import import_module
+
+    models_module = import_module(".fake_models", "popy")
+    mc = ModelContainer(models_module, provider="sqlite", filename=":memory:", create_db=True)
+
+    print(mc.ModelB)
+    c = Container(art=55, beta=0)
+
+    pass
